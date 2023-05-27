@@ -1,99 +1,141 @@
 import csv
+from typing import List
 
 class Student:
-    def create(self, first_name, last_name, student_id):
-        # Initialize student attributes
-        self.first_name = first_name
-        self.last_name = last_name
-        self.student_id = student_id
-        self.courses = []  # List to store enrolled courses
-        self.grades = {}  # Dictionary to store grades for each course
+
+    def create(self, f_name, l_name, stdnt_id):
+        self.f_name = f_name
+        self.l_name = l_name
+        self.stdnt_id = stdnt_id
+        self._courses = []  # Private list to store enrolled courses
+        self._grades = {}  # Private dictionary to store grades for each course
 
     def enroll_in_course(self, course):
-        self.courses.append(course)
+        self._courses.append(course)
 
     def add_grade(self, course_name, grade):
-        self.grades[course_name] = grade
+        self._grades[course_name] = grade
 
-    def calculate_average_grade(self):
-        if len(self.grades) == 0:
+    def get_courses(self):
+        return self._courses
+
+    def get_grades(self):
+        return self._grades
+
+    def calculate_avg_grade(self):
+        if len(self._grades) == 0:
             return 0
 
-        total_grade = sum(self.grades.values())
-        return total_grade / len(self.grades)
+        total_grade = sum(self._grades.values())
+        return total_grade / len(self._grades)
 
-    def get_full_name(self):
-        return f"{self.first_name} {self.last_name}"
+    def get_full_name(self) -> str:
+        # join the first name and last name for full name
+        return f"{self.f_name} {self.l_name}"
 
-    def to_csv_row(self, course_records):
-        row = [self.first_name, self.last_name, str(self.student_id)]
+    def to_csv_row(self, course_records: List[str]) -> List[str]:
+        row = [self.f_name, self.l_name, str(self.stdnt_id)]
+
+        # Append course name and matched grade to row
         for course_name in course_records:
             row.append(course_name)
-            if course_name in self.grades:
-                row.append(str(self.grades[course_name]))
+            if course_name in self._grades:
+                row.append(str(self._grades[course_name]))
             else:
                 row.append('')
-        row.append(str(self.calculate_average_grade()))
+
+        # Add average grade to row
+        row.append(str(self.calculate_avg_grade()))
         return row
 
 
 class SchoolSystem:
     def create(self):
-        self.student_records = []
-        self.course_records = []
+        self.students = {}
+        self.courses = []
 
-    def add_student(self, first_name, last_name, student_id):
-        student = Student()
-        student.create(first_name, last_name, student_id)
-        self.student_records.append(student)
+    def add_student(self, f_name, l_name, stdnt_id):
+        student = self.create_student(f_name, l_name, stdnt_id)
+        self.students[stdnt_id] = student
+        print(f"Student '{f_name} {l_name}' with ID '{stdnt_id}' has been added.")
+
+    def create_student(self, f_name, l_name, stdnt_id):
+        return {
+            'f_name': f_name,
+            'l_name': l_name,
+            'stdnt_id': stdnt_id,
+            'courses': [],
+            'grades': {}
+        }
 
     def add_course(self, course_name):
-        self.course_records.append(course_name)
+        self.courses.append(course_name)
+        print(f"Course '{course_name}' has been added.")
 
-    def enroll_student(self, student_id, course_name):
-        student = self.find_student(student_id)
+    def enroll_student(self, stdnt_id: int, course_name: str) -> None:
+        if stdnt_id in self.students:
+            if course_name in self.courses:
+                student = self.students[stdnt_id]
+                student['courses'].append(course_name)
+                print(f"Student '{student['f_name']} {student['l_name']}' has been enrolled in '{course_name}'.")
+            else:
+                raise ValueError("Student or course not found")
 
-        if student and course_name in self.course_records:
-            student.enroll_in_course(course_name)
-            print(f"Successfully enrolled student '{student.get_full_name()}' in the course '{course_name}'.")
+    def add_grade(self, stdnt_id: int, course_name: str, grade: float) -> None:
+        if stdnt_id in self.students:
+            if course_name in self.courses:
+                student = self.students[stdnt_id]
+                student['grades'][course_name] = grade
+                print(f"Grade '{grade}' has been added for student '{student['f_name']} {student['l_name']}' in '{course_name}'.")
+            else:
+                print(f"Course '{course_name}' not found.")
         else:
-            print("Unable to enroll student or course not found.")
+            print(f"Student with ID '{stdnt_id}' not found.")
 
-    def add_grade(self, student_id, course_name, grade):
-        student = self.find_student(student_id)
-        if student and course_name in self.course_records:
-            student.add_grade(course_name, grade)
-            print(f"Added grade '{grade}' for student '{student.get_full_name()}' in the course '{course_name}'.")
+    def calculate_avg_grade(self, stdnt_id: int) -> float:
+        if stdnt_id in self.students:
+            student = self.students[stdnt_id]
+            grades = student['grades']
+            if grades:
+                total_grade = sum(grades.values())
+                return total_grade / len(grades)
+            else:
+                return 0.0
         else:
-            print("Unable to add grade or student/course not found.")
-
-    def find_student(self, student_id):
-        for student in self.student_records:
-            if student.student_id == student_id:
-                return student
-        return None
+            print(f"Student with ID '{stdnt_id}' not found.")
+            return None
 
     def save_to_csv(self, filename):
         with open(filename, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
-            header = ['First Name', 'Last Name', 'Student ID'] + self.course_records + ['Average Grade']
+            header = ['First Name', 'Last Name', 'Student ID'] + self.courses + ['Average Grade']
             writer.writerow(header)
 
-            for student in self.student_records:
-                writer.writerow(student.to_csv_row(self.course_records))
+            for stdnt_id, student in self.students.items():
+                row = [student['f_name'], student['l_name'], str(student['stdnt_id'])]
+                grades = student['grades']
+                for course in self.courses:
+                    if course in grades:
+                        row.append(str(grades[course]))
+                    else:
+                        row.append('')
+                row.append(str(self.calculate_avg_grade(stdnt_id)))
+                writer.writerow(row)
 
         print(f"Student information and grades have been successfully saved to '{filename}'.")
 
-    def show_average_grade(self, student_id):
-        student = self.find_student(student_id)
-        if student:
-            average_grade = student.calculate_average_grade()
-            print(f"The average grade for student '{student.get_full_name()}' is {average_grade:.2f}")
-        else:
-            print("Student not found.")
+    def show_avg_grade(self, stdnt_id: int):
+        avg_grade = self.calculate_avg_grade(stdnt_id)
+        if avg_grade is not None:
+            student = self.students.get(stdnt_id)
+            if student:
+                print(f"The average grade for student '{student['f_name']} {student['l_name']}' is {avg_grade:.2f}")
+            else:
+                print(f"Student with ID '{stdnt_id}' not found.")
 
 
-# Example usage
+
+# Example
 school = SchoolSystem()
 school.create()
 
@@ -115,7 +157,7 @@ school.add_grade(123, "History", 73)
 school.add_grade(456, "Geography", 81)
 school.add_grade(456, "Science", 67)
 
-school.show_average_grade(123)
-school.show_average_grade(456)
+school.show_avg_grade(123)
+school.show_avg_grade(456)
 
 school.save_to_csv('student_records.csv')
