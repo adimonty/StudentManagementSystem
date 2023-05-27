@@ -79,7 +79,7 @@ class SchoolSystem:
                 student['courses'].append(course_name)
                 print(f"Student '{student['f_name']} {student['l_name']}' has been enrolled in '{course_name}'.")
             else:
-                raise ValueError("Student or course not found")
+                raise ValueError("Student or course not found.")
 
     def add_grade(self, stdnt_id: int, course_name: str, grade: float) -> None:
         if stdnt_id in self.students:
